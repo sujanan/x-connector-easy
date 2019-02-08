@@ -29,6 +29,13 @@ def randword(length):
         random.choice(string.ascii_lowercase) for i in range(length))
 
 
+def parsejson(filename):
+    if not os.path.exists(filename):
+        return {}
+    with open(filename) as jsonfile:
+        return json.load(jsonfile)
+
+
 class PropKind:
     Init = 0
     Meth = 1
@@ -85,8 +92,8 @@ class Proxy(object):
         ET.SubElement(tag, key).text = "{{$ctx:{key}}}".format(key=key)
 
     def toprettyxml(self):
-        return minidom.parseString(ET.tostring(
-            self.xml)).toprettyxml(indent=" " * Proxy._indention)
+        return minidom.parseString(ET.tostring(self.xml)).toprettyxml(
+            encoding="utf-8", indent=" " * Proxy._indention).decode("utf-8")
 
     def _init_tag_name(self):
         return "{}.init".format(self.conn_name)
@@ -106,13 +113,6 @@ class Proxy(object):
                 "</target>".format(
                     init_tag=self._init_tag_name(),
                     meth_tag=self._meth_tag_name()))
-
-
-def parsejson(filename):
-    if not os.path.exists(filename):
-        return {}
-    with open(filename) as jsonfile:
-        return json.load(jsonfile)
 
 
 if __name__ == "__main__":
