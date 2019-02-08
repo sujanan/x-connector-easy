@@ -5,7 +5,7 @@ import json
 import os.path
 import random
 import string
-import xml.etree.cElementTree as ET
+import xml.etree.cElementTree as etree
 from xml.dom import minidom
 
 INIT_FILENAME = "init.json"
@@ -63,8 +63,8 @@ class Proxy(object):
             if a in Proxy._attribs:
                 Proxy._attribs[a] = attribs[a]
 
-        self.xml = ET.Element("proxy", Proxy._attribs)
-        bodybase = ET.fromstring(self._bodybase())
+        self.xml = etree.Element("proxy", Proxy._attribs)
+        bodybase = etree.fromstring(self._bodybase())
 
         self._wrap_tag = bodybase.find("inSequence")
         self._init_tag = self._wrap_tag.find(self._init_tag_name())
@@ -78,7 +78,7 @@ class Proxy(object):
         self.xml.append(bodybase)
 
     def addproperty(self, key, kind):
-        prop = ET.Element("property", {
+        prop = etree.Element("property", {
             "name": key,
             "expression": "json-eval($.{})".format(key)
         })
@@ -89,10 +89,10 @@ class Proxy(object):
         elif kind == PropKind.Meth:
             tag = self._meth_tag
 
-        ET.SubElement(tag, key).text = "{{$ctx:{key}}}".format(key=key)
+        etree.SubElement(tag, key).text = "{{$ctx:{key}}}".format(key=key)
 
     def toprettyxml(self):
-        return minidom.parseString(ET.tostring(self.xml)).toprettyxml(
+        return minidom.parseString(etree.tostring(self.xml)).toprettyxml(
             encoding="utf-8", indent=" " * Proxy._indention).decode("utf-8")
 
     def _init_tag_name(self):
