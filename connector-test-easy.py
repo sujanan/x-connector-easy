@@ -5,10 +5,21 @@ import json
 import os.path
 import random
 import string
+import re
 import xml.etree.cElementTree as etree
 from xml.dom import minidom
 
-INIT_FILENAME = "init.json"
+FILENAME_RE = (
+    ".*"  # connector name with any character except newline
+    "_"  # connector name and method name are seperated by '_'
+    ".*"  # connector name with any character except newline
+    "\.json$"  # file extension
+)
+
+
+def validfilename(filename):
+    r = re.search(FILENAME_RE, filename)
+    return True if r else False
 
 
 def rmext(filename):
@@ -22,6 +33,11 @@ def rmext(filename):
         return filename
 
     return filename[:i]
+
+
+def conn_meth(name):
+    conn_meth = name.split("_")
+    return conn_meth[0], conn_meth[1]
 
 
 def randword(length):
@@ -53,7 +69,7 @@ class Proxy(object):
 
     _indention = 2
 
-    def __init__(self, meth_name, conn_name, init, meth, attribs={}):
+    def __init__(self, conn_name, meth_name, init, meth, attribs={}):
         self.init = init
         self.meth = meth
         self.meth_name = meth_name
@@ -118,27 +134,35 @@ class Proxy(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "method_name",
+        "connector_method",
         type=str,
-        help=("json file with required data named after the"
-              "method wanted to get executed. e.g. getAllCats.json"))
+        help=
+        ("json file with required data named accoding to format "
+         "${connectorname}_${methodname}.json e.g. catconnector_getAllCats.json"
+         ))
     parser.add_argument(
         "-p",
         "--proxy",
-        nargs=1,
-        help="generates proxy xml for a given method",
-        metavar="CONNECTOR")
+        action="store_true",
+        help="generates proxy xml for a given method")
     args = parser.parse_args()
 
-    data_filename = args.method_name
+    data_fullpath = args.connector_method
+
+    data_filename = os.path.basename(data_fullpath)
     proxy_enabled = args.proxy
 
-    init = parsejson(INIT_FILENAME)
-    meth = parsejson(data_filename)
+    if not validfilename(data_filename):
+        sys.exit()
+
+    conn_name, meth_name = conn_meth(rmext(data_filename))
+
+    init_path = os.path.join(os.path.dirname(data_fullpath), "init")
+    meth_path = data_fullpath
+    init = parsejson(init_path)
+    meth = parsejson(meth_path)
 
     if proxy_enabled:
-        conn_name = proxy_enabled[0]
-        meth_name = rmext(data_filename)
         p = Proxy(
             conn_name,
             meth_name,
