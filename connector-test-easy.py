@@ -1,11 +1,14 @@
 #!/usr/bin/python3
 
-import argparse
+import re
+import sys
 import json
-import os.path
+import socket
 import random
 import string
-import re
+import os.path
+import argparse
+import requests
 import xml.etree.cElementTree as etree
 from xml.dom import minidom
 
@@ -50,6 +53,10 @@ def parsejson(filename):
         return {}
     with open(filename) as jsonfile:
         return json.load(jsonfile)
+
+
+def proxyname(conn_name, meth_name):
+    return "{}_{}".format(conn_name, meth_name)
 
 
 class PropKind:
@@ -131,15 +138,40 @@ class Proxy(object):
                     meth_tag=self._meth_tag_name()))
 
 
+def post(url, payload, verbose):
+    res = requests.post(url, json=payload)
+
+    code = res.status_code
+
+    code_msg = requests.status_codes._codes[code][0]
+    code_msg = code_msg.split("_")
+    code_msg = [msg.title() for msg in code_msg]
+    code_msg = " ".join(code_msg)
+
+    headers = res.headers if res.headers else {}
+    headers = [
+        "{key}: {value}".format(key=key, value=headers[key]) for key in headers
+    ]
+    headers = "\n".join(headers)
+
+    content = res.content.decode("utf-8")
+
+    return ("HTTP/1.1 {code} {code_msg}\n"
+            "{headers}\n\n"
+            "{content}\n".format(
+                code=code, code_msg=code_msg, headers=headers,
+                content=content))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "connector_method",
         type=str,
-        help=
-        ("json file with required data named accoding to format "
-         "${connectorname}_${methodname}.json e.g. catconnector_getAllCats.json"
-         ))
+        help=(
+            "json file with required data named accoding to format "
+            "$connectorname_$methodname.json e.g. catconnector_getAllCats.json"
+        ))
     parser.add_argument(
         "-p",
         "--proxy",
@@ -147,17 +179,19 @@ if __name__ == "__main__":
         help="generates proxy xml for a given method")
     args = parser.parse_args()
 
+    proxy_enabled = args.proxy
+
     data_fullpath = args.connector_method
 
     data_filename = os.path.basename(data_fullpath)
-    proxy_enabled = args.proxy
 
     if not validfilename(data_filename):
         sys.exit()
 
     conn_name, meth_name = conn_meth(rmext(data_filename))
 
-    init_path = os.path.join(os.path.dirname(data_fullpath), "init")
+    init_path = os.path.join(
+        os.path.dirname(data_fullpath), "{}_init.json".format(conn_name))
     meth_path = data_fullpath
     init = parsejson(init_path)
     meth = parsejson(meth_path)
@@ -168,7 +202,11 @@ if __name__ == "__main__":
             meth_name,
             init=[*init],
             meth=[*meth],
-            attribs={"name": "{}_{}".format(conn_name, meth_name)})
+            attribs={"name": proxyname(conn_name, meth_name)})
         print(p.toprettyxml())
     else:
-        pass
+        url = "http://{hostname}:8280/services/{proxyname}".format(
+            hostname=socket.gethostname(),
+            proxyname=proxyname(conn_name, meth_name))
+        resstr = post(url, payload={**init, **meth}, verbose=True)
+        print(resstr)
