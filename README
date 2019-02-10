@@ -1,7 +1,8 @@
 x-connector-easy
 ================
 
-test-easy.py: 
-    This script can be used for building a proxy service source
-    for a given data for a specific connector's method implementation.
-    Use './test-easy.py --help' for more information.
+test-easy.py
+------------
+This script can be used for building a proxy service source
+for a given data for a specific connector's method implementation.
+Use './test-easy.py --help' for more information.
