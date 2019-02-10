@@ -13,9 +13,9 @@ import xml.etree.cElementTree as etree
 from xml.dom import minidom
 
 FILENAME_RE = (
-    ".*"  # connector name with any character except newline
-    "_"  # connector name and method name are seperated by '_'
-    ".*"  # connector name with any character except newline
+    ".*"  # connector name with any character but newline
+    "_"  # connector name and method name are seperated with a '_'
+    ".*"  # method name with any character but newline
     "\.json$"  # file extension
 )
 
@@ -56,6 +56,13 @@ def parsejson(filename):
 
 
 def proxyname(conn_name, meth_name):
+    # So if every route build proxy names through this function no need to
+    # worry about giving the name of the proxy as an extra argument.
+    #
+    # NOTE: This is not the proper way to build a proxy name. The proxy name
+    # should be unique combination of connector name, method name and data. This will be
+    # considered as how it is used in future. For the moment this seems unique enough.
+
     return "{}_{}".format(conn_name, meth_name)
 
 
@@ -66,7 +73,8 @@ class PropKind:
 
 class Proxy(object):
     _attribs = {
-        "name": randword(10),
+        "name": randword(10),  # This is only a placeholder 
+        # just for readablity, obviously will replace later.
         "xmlns": "http://ws.apache.org/ns/synapse",
         "startOnLoad": "true",
         "statistics": "disable",
@@ -76,7 +84,7 @@ class Proxy(object):
 
     _indention = 2
 
-    def __init__(self, conn_name, meth_name, init, meth, attribs={}):
+    def __init__(self, name, conn_name, meth_name, init, meth, attribs={}):
         self.init = init
         self.meth = meth
         self.meth_name = meth_name
@@ -85,6 +93,8 @@ class Proxy(object):
         for a in attribs:
             if a in Proxy._attribs:
                 Proxy._attribs[a] = attribs[a]
+
+        Proxy._attribs["name"] = name
 
         self.xml = etree.Element("proxy", Proxy._attribs)
         bodybase = etree.fromstring(self._bodybase())
@@ -198,11 +208,11 @@ if __name__ == "__main__":
 
     if proxy_enabled:
         p = Proxy(
+            proxyname(conn_name, meth_name),
             conn_name,
             meth_name,
             init=[*init],
-            meth=[*meth],
-            attribs={"name": proxyname(conn_name, meth_name)})
+            meth=[*meth])
         print(p.toprettyxml())
     else:
         url = "http://{hostname}:8280/services/{proxyname}".format(
