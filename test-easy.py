@@ -149,28 +149,36 @@ class Proxy(object):
 
 
 def post(url, payload, verbose):
-    res = requests.post(url, json=payload)
+    # TODO: Well this may work but should do better.
+    try:
+        res = requests.post(url, json=payload)
 
-    code = res.status_code
+        code = res.status_code
 
-    code_msg = requests.status_codes._codes[code][0]
-    code_msg = code_msg.split("_")
-    code_msg = [msg.title() for msg in code_msg]
-    code_msg = " ".join(code_msg)
+        code_msg = requests.status_codes._codes[code][0]
+        code_msg = code_msg.split("_")
+        code_msg = [msg.title() for msg in code_msg]
+        code_msg = " ".join(code_msg)
 
-    headers = res.headers if res.headers else {}
-    headers = [
-        "{key}: {value}".format(key=key, value=headers[key]) for key in headers
-    ]
-    headers = "\n".join(headers)
+        headers = res.headers if res.headers else {}
+        headers = [
+            "{key}: {value}".format(key=key, value=headers[key])
+            for key in headers
+        ]
+        headers = "\n".join(headers)
 
-    content = res.content.decode("utf-8")
+        content = res.content.decode("utf-8")
 
-    return ("HTTP/1.1 {code} {code_msg}\n"
-            "{headers}\n\n"
-            "{content}\n".format(
-                code=code, code_msg=code_msg, headers=headers,
-                content=content))
+        return ("HTTP/1.1 {code} {code_msg}\n"
+                "{headers}\n\n"
+                "{content}\n".format(
+                    code=code,
+                    code_msg=code_msg,
+                    headers=headers,
+                    content=content))
+    except Exception as e:
+        print(e)
+        sys.exit()
 
 
 if __name__ == "__main__":
